@@ -2,14 +2,27 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient'; // Import our client
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from 'recharts'; // Correct import for Table components
+// Correctly import only the necessary components from recharts
+import { 
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
+} from 'recharts';
+// For the table, we'll use basic HTML table elements styled inline
 
 // Helper to format timestamp
 const formatTimestamp = (isoString) => {
   if (!isoString) return 'N/A';
-  const date = new Date(isoString);
-  return date.toLocaleTimeString(); // Format as HH:MM:SS AM/PM
+  try {
+    const date = new Date(isoString);
+    if (isNaN(date.getTime())) {
+      return 'Invalid Date';
+    }
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }); 
+  } catch (error) {
+    console.error("Error formatting timestamp:", error, "Input:", isoString);
+    return 'Error';
+  }
 };
+
 
 export default function Dashboard() {
   const [data, setData] = useState([]);
@@ -18,30 +31,36 @@ export default function Dashboard() {
 
   // Function to fetch data from Supabase
   const fetchData = async () => {
+    // Ensure supabase client is initialized before fetching
+    if (!supabase) {
+        setError("Supabase client not initialized. Check environment variables.");
+        setLoading(false);
+        return;
+    }
+      
+    setLoading(true); // Set loading true at the start of fetch
     try {
-      // --- THE FIX IS HERE ---
-      // Removed the .order('created_at', ...) part
       const { data: sensorData, error: fetchError } = await supabase
         .from('sensor_data')
         .select('*')
-        .limit(100); // Get the latest 100 entries
+        .order('id', { ascending: false }) 
+        .limit(100);
 
       if (fetchError) {
         throw fetchError;
       }
       
-      // Add a formatted timestamp for display
       const formattedData = sensorData.map(item => ({
         ...item,
-        timestamp: formatTimestamp(item.created_at) // Keep formatting if column exists, handle null
-      })).reverse(); // Reverse to show oldest first in chart/table if needed
+        timestamp: formatTimestamp(item.created_at) 
+      }));
 
       setData(formattedData);
-      setError(null); // Clear previous errors
+      setError(null); 
     } catch (err) {
       console.error('Error fetching data:', err);
       setError(err.message || 'Failed to fetch data');
-      setData([]); // Clear data on error
+      setData([]); 
     } finally {
       setLoading(false);
     }
@@ -49,34 +68,46 @@ export default function Dashboard() {
 
   // Fetch data on initial load and set up real-time listener
   useEffect(() => {
+    // Ensure supabase client is initialized before setting up listener
+    if (!supabase) {
+        setError("Supabase client not initialized. Cannot set up real-time listener.");
+        setLoading(false);
+        return;
+    }
+      
     fetchData(); // Initial fetch
 
-    // Set up Supabase real-time subscription
     const channel = supabase
       .channel('sensor_data_changes')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sensor_data' }, (payload) => {
         console.log('New data received:', payload.new);
-        // Add new data to the state, keeping the array size limited
         setData((currentData) => {
            const newDataPoint = {
              ...payload.new,
-             timestamp: formatTimestamp(payload.new.created_at) // Format timestamp
+             timestamp: formatTimestamp(payload.new.created_at) 
            };
-           // Add new point and keep only the latest 100 entries
            const updatedData = [newDataPoint, ...currentData].slice(0, 100); 
            return updatedData;
         });
       })
-      .subscribe();
+      .subscribe((status, err) => { // Added error handling for subscribe
+          if (err) {
+              console.error("Supabase subscription error:", err);
+              setError("Real-time connection failed.");
+          } else {
+              console.log("Supabase subscription status:", status);
+          }
+      });
 
-    // Clean up subscription on component unmount
     return () => {
-      supabase.removeChannel(channel);
+      if (supabase && channel) { // Ensure channel exists before removing
+         supabase.removeChannel(channel);
+      }
     };
-  }, []); // Empty dependency array means this runs once on mount
+  }, []); 
 
   // --- Render the UI ---
-  if (loading) {
+  if (loading && data.length === 0) { // Show loading only on initial load
     return <div style={styles.container}>Loading sensor data...</div>;
   }
 
@@ -84,13 +115,12 @@ export default function Dashboard() {
     return <div style={styles.container}>Error: {error}</div>;
   }
 
-  if (data.length === 0) {
+  if (data.length === 0 && !loading) { // Show no data message only if not loading
     return <div style={styles.container}>No sensor data yet. Make sure your ESP8266 is running and sending data.</div>;
   }
 
-  // Prepare data for the chart (ensure values are numbers)
-   const chartData = data.map(d => ({
-    timestamp: d.timestamp || 'N/A', // Use formatted time or 'N/A'
+   const chartData = [...data].reverse().map(d => ({ 
+    timestamp: d.timestamp || 'N/A', 
     Weight: parseFloat(d.weight_g) || 0,
     GyroX: parseFloat(d.gyro_x) || 0,
     GyroY: parseFloat(d.gyro_y) || 0,
@@ -111,10 +141,10 @@ export default function Dashboard() {
             <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" label={{ value: 'Gyro (°/s)', angle: -90, position: 'insideRight', fill: '#82ca9d' }} />
             <Tooltip contentStyle={{ backgroundColor: '#333', border: 'none' }} itemStyle={{ color: '#eee' }} />
             <Legend wrapperStyle={{ color: '#ccc' }}/>
-            <Line yAxisId="left" type="monotone" dataKey="Weight" stroke="#8884d8" dot={false} />
-            <Line yAxisId="right" type="monotone" dataKey="GyroX" stroke="#82ca9d" dot={false} />
-            <Line yAxisId="right" type="monotone" dataKey="GyroY" stroke="#ffc658" dot={false} />
-            <Line yAxisId="right" type="monotone" dataKey="GyroZ" stroke="#ff7300" dot={false} />
+            <Line yAxisId="left" type="monotone" dataKey="Weight" stroke="#8884d8" dot={false} isAnimationActive={false} />
+            <Line yAxisId="right" type="monotone" dataKey="GyroX" stroke="#82ca9d" dot={false} isAnimationActive={false}/>
+            <Line yAxisId="right" type="monotone" dataKey="GyroY" stroke="#ffc658" dot={false} isAnimationActive={false}/>
+            <Line yAxisId="right" type="monotone" dataKey="GyroZ" stroke="#ff7300" dot={false} isAnimationActive={false}/>
           </LineChart>
         </ResponsiveContainer>
       </div>
@@ -122,40 +152,40 @@ export default function Dashboard() {
       {/* --- Data Table --- */}
       <div style={styles.tableContainer}>
         <h2 style={styles.subHeader}>Recent Readings</h2>
-         <Table style={{ width: '100%', borderCollapse: 'collapse' }}> {/* Basic table styling */}
-          <TableHeader>
-            <TableRow style={styles.tableHeaderRow}>
-              <TableHead style={styles.tableHeaderCell}>Timestamp</TableHead>
-              <TableHead style={styles.tableHeaderCell}>Weight (g)</TableHead>
-              <TableHead style={styles.tableHeaderCell}>Gyro X</TableHead>
-              <TableHead style={styles.tableHeaderCell}>Gyro Y</TableHead>
-              <TableHead style={styles.tableHeaderCell}>Gyro Z</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data.slice(0, 10).map((row) => ( // Show only latest 10 rows
-              <TableRow key={row.id} style={styles.tableRow}>
-                <TableCell style={styles.tableCell}>{row.timestamp}</TableCell>
-                <TableCell style={styles.tableCell}>{row.weight_g?.toFixed(1)}</TableCell>
-                <TableCell style={styles.tableCell}>{row.gyro_x?.toFixed(1)}</TableCell>
-                <TableCell style={styles.tableCell}>{row.gyro_y?.toFixed(1)}</TableCell>
-                <TableCell style={styles.tableCell}>{row.gyro_z?.toFixed(1)}</TableCell>
-              </TableRow>
+         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={styles.tableHeaderRow}>
+              <th style={styles.tableHeaderCell}>Timestamp</th>
+              <th style={styles.tableHeaderCell}>Weight (g)</th>
+              <th style={styles.tableHeaderCell}>Gyro X</th>
+              <th style={styles.tableHeaderCell}>Gyro Y</th>
+              <th style={styles.tableHeaderCell}>Gyro Z</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.slice(0, 10).map((row) => ( 
+              <tr key={row.id} style={styles.tableRow}>
+                <td style={styles.tableCell}>{row.timestamp}</td>
+                <td style={styles.tableCell}>{row.weight_g?.toFixed(1)}</td>
+                <td style={styles.tableCell}>{row.gyro_x?.toFixed(1)}</td>
+                <td style={styles.tableCell}>{row.gyro_y?.toFixed(1)}</td>
+                <td style={styles.tableCell}>{row.gyro_z?.toFixed(1)}</td>
+              </tr>
             ))}
-          </TableBody>
-        </Table>
+          </tbody>
+        </table>
       </div>
     </div>
   );
 }
 
-// Basic Inline Styles (can be moved to a CSS file)
+// Basic Inline Styles
 const styles = {
   container: {
     fontFamily: 'sans-serif',
     padding: '20px',
-    backgroundColor: '#222', // Dark background
-    color: '#eee', // Light text
+    backgroundColor: '#222', 
+    color: '#eee', 
     minHeight: '100vh',
   },
   header: {
@@ -173,7 +203,7 @@ const styles = {
   },
    tableContainer: {
     maxWidth: '800px',
-    margin: '0 auto', // Center the table
+    margin: '0 auto', 
   },
   tableHeaderRow: {
     backgroundColor: '#333',
@@ -183,6 +213,7 @@ const styles = {
     padding: '8px 12px',
     textAlign: 'left',
     color: '#eee',
+    fontWeight: 'bold', 
   },
   tableRow: {
      borderBottom: '1px solid #444',
@@ -192,3 +223,4 @@ const styles = {
     color: '#ccc',
   },
 };
+
