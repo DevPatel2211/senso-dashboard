@@ -12,16 +12,10 @@
 
 .chartGrid {
   display: grid;
-  grid-template-columns: 1fr;
+  /* This will create a 1, 2, or 3 column layout based on screen size */
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
   gap: 2rem;
   margin-bottom: 2.5rem;
-}
-
-/* On larger screens, show charts side-by-side */
-@media (min-width: 1024px) {
-  .chartGrid {
-    grid-template-columns: 1fr 1fr;
-  }
 }
 
 .chartBox {
