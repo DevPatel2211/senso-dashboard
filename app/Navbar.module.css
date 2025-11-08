@@ -1,0 +1,23 @@
+/*
+  Styles for the main navigation bar in layout.js
+*/
+.navbar {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  padding: 1.5rem 2rem;
+  background-color: var(--background-light);
+  border-bottom: 1px solid #374151;
+}
+
+.navLink {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: color 0.2s ease-in-out;
+}
+
+.navLink:hover {
+  color: var(--text-primary);
+}

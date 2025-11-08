@@ -1,0 +1,80 @@
+.container {
+  width: 100%;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 2rem;
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.chartGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+  margin-bottom: 2.5rem;
+}
+
+/* On larger screens, show charts side-by-side */
+@media (min-width: 1024px) {
+  .chartGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.chartBox {
+  background-color: var(--background-light);
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  height: 400px; /* Give charts a fixed height */
+}
+
+.chartBox h2 {
+  margin-bottom: 1.5rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  text-align: center;
+}
+
+.tableContainer {
+  background-color: var(--background-light);
+  padding: 2rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  overflow-x: auto; /* Allow table to scroll horizontally on small screens */
+}
+
+.tableContainer h2 {
+  margin-bottom: 1.5rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 600px; /* Ensure table has a minimum width */
+}
+
+.th {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  background-color: var(--background-card);
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.875rem;
+  text-transform: uppercase;
+}
+
+.td {
+  padding: 0.75rem 1rem;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.tr:last-child .td {
+  border-bottom: none;
+}
