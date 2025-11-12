@@ -22,7 +22,7 @@ export default function DataPage() {
       if (fetchError) {
         throw fetchError;
       }
-      
+
       setData(sensorData.reverse());
       setError(null);
 
@@ -43,9 +43,9 @@ export default function DataPage() {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sensor_data' }, (payload) => {
         console.log('New data received:', payload.new);
         setData((currentData) => {
-           const newDataPoint = { ...payload.new };
-           const updatedData = [...currentData, newDataPoint].slice(-50); 
-           return updatedData;
+          const newDataPoint = { ...payload.new };
+          const updatedData = [...currentData, newDataPoint].slice(-50);
+          return updatedData;
         });
       })
       .subscribe();
@@ -58,22 +58,22 @@ export default function DataPage() {
   if (loading) {
     return <div className={styles.container}>Loading sensor data...</div>;
   }
-  
+
   if (error) {
     return <div className={styles.container} style={{ color: '#EF4444' }}>Error: {error}</div>;
   }
 
   // Prepare data for the chart
-   const chartData = data.map(d => ({
+  const chartData = data.map(d => ({
     timestamp: d.id, // Use ID as the timestamp
     Weight: parseFloat(d.weight_g) || 0,
     GyroX: parseFloat(d.gyro_x) || 0,
     GyroY: parseFloat(d.gyro_y) || 0,
     GyroZ: parseFloat(d.gyro_z) || 0,
     Temperature: parseFloat(d.temperature_c) || 0,
-    IR_Value: parseInt(d.ir_value) || 0
+    IR_Value: parseInt(d.ir_value) || 0 // <-- ADDED IR_VALUE
   }));
-  
+
   // --- Style definitions for charts (hardcoded hex values) ---
   const axisColor = "#9CA3AF"; // --text-secondary
   const gridColor = "#4B5563"; // --border-color
@@ -85,7 +85,7 @@ export default function DataPage() {
       <h1 className={styles.header}>Real-Time Data Dashboard</h1>
 
       <div className={styles.chartGrid}>
-        
+
         {/* --- Individual Chart: Weight --- */}
         <div className={styles.chartBox}>
           <h2>Weight Over Time</h2>
@@ -122,7 +122,7 @@ export default function DataPage() {
           <ResponsiveContainer width="100%" height="90%">
             <LineChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-              <XAxis dataKey="timestamp" stroke={axisColor} fontSize="12px" label={{ value: 'Row ID', position: 'insideBottom', dy: 10, fill: axisColor }}/>
+              <XAxis dataKey="timestamp" stroke={axisColor} fontSize="12px" label={{ value: 'Row ID', position: 'insideBottom', dy: 10, fill: axisColor }} />
               <YAxis stroke={axisColor} fontSize="12px" label={{ value: 'Gyro (°/s)', angle: -90, position: 'insideLeft', fill: axisColor, dx: 10 }} />
               <Tooltip contentStyle={{ backgroundColor: tooltipBackground, border: `1px solid ${gridColor}` }} itemStyle={{ color: tooltipText }} />
               <Legend />
@@ -163,7 +163,7 @@ export default function DataPage() {
                 <th className={styles.th}>Gyro X</th>
                 <th className={styles.th}>Gyro Y</th>
                 <th className={styles.th}>Gyro Z</th>
-                <th className={styles.th}>IR Value</th> 
+                <th className={styles.th}>IR Value</th>
               </tr>
             </thead>
             <tbody>
@@ -175,14 +175,14 @@ export default function DataPage() {
                   <td className={styles.td}>{row.gyro_x?.toFixed(1)}</td>
                   <td className={styles.td}>{row.gyro_y?.toFixed(1)}</td>
                   <td className={styles.td}>{row.gyro_z?.toFixed(1)}</td>
-                  <td className={styles.td}>{row.ir_value}</td> 
+                  <td className={styles.td}>{row.ir_value}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       ) : (
-         <p style={{textAlign: 'center', fontSize: '1.2rem', color: '#9CA3AF'}}>No sensor data yet. Make sure your ESP8266 is running and sending data.</p>
+        <p style={{ textAlign: 'center', fontSize: '1.2rem', color: '#9CA3AF' }}>No sensor data yet. Make sure your ESP8266 is running and sending data.</p>
       )}
     </div>
   );
